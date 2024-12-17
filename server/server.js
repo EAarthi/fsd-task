@@ -24,6 +24,42 @@ db.connect((err) => {
   console.log("Connected to MySQL database.");
 });
 
-app.listen(3000, () => {
-    console.log('server is running on port 3000')
-})
+app.post("/register", (req, res) => {
+  const { name, employee_id, email, phone, department, date_of_joining, role } = req.body;
+
+  if (!name || !employee_id || !email || !phone || !department || !date_of_joining || !role) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const checkEmployeeQuery = `SELECT * FROM employees WHERE employee_id = ? OR email = ?`;
+  db.query(checkEmployeeQuery, [employee_id, email], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error checking existing records" });
+    }
+
+    if (result.length > 0) {
+      if (result.some(record => record.employee_id === employee_id)) {
+        return res.status(409).json({ message: "Employee ID already exists" });
+      }
+      if (result.some(record => record.email === email)) {
+        return res.status(409).json({ message: "Email already exists" });
+      }
+    }
+    const query = `INSERT INTO employees (name, employee_id, email, phone, department, date_of_joining, role)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+    db.query(query, [name, employee_id, email, phone, department, date_of_joining, role], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ message: "Error registering employee" });
+      }
+      res.status(201).json({ message: "Employee registered successfully", employeeId: result.insertId });
+    });
+  });
+});
+
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
