@@ -31,6 +31,7 @@ app.post("/register", (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
+  // Check if employee ID and email already exists
   const checkEmployeeQuery = `SELECT * FROM employees WHERE employee_id = ? OR email = ?`;
   db.query(checkEmployeeQuery, [employee_id, email], (err, result) => {
     if (err) {
@@ -46,6 +47,7 @@ app.post("/register", (req, res) => {
         return res.status(409).json({ message: "Email already exists" });
       }
     }
+    // Insert new employee record
     const query = `INSERT INTO employees (name, employee_id, email, phone, department, date_of_joining, role)
                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
@@ -58,6 +60,58 @@ app.post("/register", (req, res) => {
     });
   });
 });
+app.get("/read", (req, res) => {
+  const query = "SELECT * FROM employees";
+  db.query(query, (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error retrieving employees" });
+    }
+    res.status(200).json(result);
+  });
+})
+
+// Update employee details
+app.put("/update/:id", (req, res) => {
+  const { name, employee_id, email, phone, department, date_of_joining, role } = req.body;
+  const employeeId = req.params.id;
+
+  if (!name || !employee_id || !email || !phone || !department || !date_of_joining || !role) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const query = `
+    UPDATE employees SET name = ?, employee_id = ?, email = ?, phone = ?, department = ?, date_of_joining = ?, role = ?
+    WHERE employee_id = ?
+  `;
+
+  db.query(query, [name, employee_id, email, phone, department, date_of_joining, role, employeeId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error updating employee" });
+    }
+    res.status(200).json({ message: "Employee updated successfully" });
+  });
+});
+
+
+// Delete employee details
+app.delete("/delete/:id", (req, res) => {
+  const employeeId = req.params.id;
+
+  const query = "DELETE FROM employees WHERE employee_id = ?";
+  db.query(query, [employeeId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Error deleting employee" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+    res.status(200).json({ message: "Employee deleted successfully" });
+  });
+});
+
 
 
 app.listen(port, () => {
